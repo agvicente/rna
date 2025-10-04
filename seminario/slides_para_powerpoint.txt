@@ -1,0 +1,416 @@
+SLIDES PARA POWERPOINT - COPY/PASTE DIRETO
+=====================================================
+
+SLIDE 1: TÍTULO
+----------------
+Learning Multiple Layers of Features from Tiny Images
+
+Alex Krizhevsky (2009)
+University of Toronto
+Orientador: Geoffrey Hinton
+
+Apresentação para Banca de Pós-Graduação
+
+SLIDE 2: CONTEXTO HISTÓRICO
+---------------------------
+Deep Learning em 2009 - O Renascimento
+
+O Breakthrough:
+• 2006: Hinton introduz DBNs
+• Problema: Como treinar redes profundas?
+• Solução: Pré-treinamento não supervisionado
+
+Desafios da Época:
+• ❌ Vanishing gradient problem
+• ❌ Falta de grandes datasets rotulados
+• ❌ Limitações computacionais
+• ❌ Feature engineering manual
+
+SLIDE 3: MOTIVAÇÃO
+------------------
+Motivação do Trabalho
+
+Falhas Anteriores:
+• MIT/NYU falharam com "80 million tiny images"
+• Modelos aprendiam apenas filtros ruidosos
+
+Objetivos Principais:
+1. Modelagem generativa eficaz de imagens
+2. Datasets confiáveis para benchmarking  
+3. Paralelização para escalabilidade
+
+SLIDE 4: PROPRIEDADES DOS DADOS
+-------------------------------
+Propriedades das Imagens Naturais
+
+[INSERIR IMAGEM: Covariance matrix of all pixels - Figure 1.1]
+Legenda: Matriz de covariância mostrando correlações entre pixels RGB
+
+Características Observadas:
+• Pixels próximos: fortemente correlacionados
+• Pixels distantes: fracamente correlacionados
+• Simetria horizontal/vertical
+• Separação por canais de cor
+
+SLIDE 5: ZCA WHITENING
+----------------------
+ZCA Whitening - Fundamento Teórico
+
+Por que Whitening?
+• Remove correlações de segunda ordem
+• Força foco em correlações de alta ordem
+• Fundamental para sucesso do método
+
+Formulação Matemática:
+C = (1/(n-1)) × XX^T
+W = (1/√(n-1)) × P × D^(-1/2) × P^T
+Y = WX
+
+SLIDE 6: FILTROS DE WHITENING
+-----------------------------
+Filtros de Whitening e Dewhitening
+
+[INSERIR IMAGEM: Whitening filters - Figure 1.3]
+Legenda: Filtros para componentes RGB de pixels específicos
+
+[INSERIR IMAGEM: Dewhitening filters - Figure 1.4]  
+Legenda: Filtros correspondentes para reconstrução
+
+Características:
+• Altamente locais devido à correlação espacial
+• Separação por canais RGB
+• Simetria reflete propriedades das imagens
+
+SLIDE 7: RESTRICTED BOLTZMANN MACHINES
+--------------------------------------
+Restricted Boltzmann Machines
+
+[INSERIR IMAGEM: RBM architecture - Figure 1.6]
+Legenda: Unidades visíveis e ocultas sem conexões intra-camada
+
+Função de Energia (RBM Binária):
+E(v,h) = -∑∑(v_i × h_j × w_ij) - ∑(v_i × b_v_i) - ∑(h_j × b_h_j)
+
+Onde:
+• v: estado das unidades visíveis
+• h: estado das unidades ocultas
+• w_ij: pesos entre unidades
+
+SLIDE 8: RBM GAUSSIANA-BERNOULLI
+--------------------------------
+RBM Gaussiana-Bernoulli
+
+Para Dados Reais (Intensidades de Pixels):
+
+E(v,h) = ∑(v_i - b_v_i)²/(2σ_i²) - ∑(b_h_j × h_j) - ∑∑(v_i × h_j × w_ij / σ_i)
+
+Distribuições Condicionais:
+• Visíveis: Gaussianas com média dependente de h
+• Ocultas: Bernoulli com probabilidade sigmoid
+
+SLIDE 9: CONTRASTIVE DIVERGENCE
+-------------------------------
+Contrastive Divergence (CD-1)
+
+[INSERIR IMAGEM: CD-N procedure - Figure 1.7]
+Legenda: Procedimento de sampling alternado para estimação
+
+Atualização de Pesos:
+Δw_ij = ε × (E_data[v_i × h_j] - E_model[v_i × h_j])
+
+• E_data: Expectativa com visíveis fixadas
+• E_model: Expectativa aproximada por CD
+
+SLIDE 10: DEEP BELIEF NETWORKS
+------------------------------
+Deep Belief Networks
+
+[INSERIR IMAGEM: DBN architecture - Figure 1.8]
+Legenda: Treinamento layer-by-layer com W₁ fixo
+
+Processo de Treinamento:
+1. RBM 1: Treina nos dados originais
+2. RBM 2: Treina nas ativações da RBM 1
+3. Repetir: Para camadas adicionais
+4. Fine-tuning: Ajuste supervisionado opcional
+
+SLIDE 11: PROBLEMA INICIAL
+--------------------------
+Tentativas Iniciais - O Problema
+
+[INSERIR IMAGEM: Meaningless filters - Figure 2.1]
+Legenda: Filtros ruidosos aprendidos em dados whitened
+
+Causa do Problema:
+• Ruído de alta frequência dominante
+• Correlações complexas não capturadas
+• Necessidade: Estratégias mais sofisticadas
+
+SLIDE 12: ANÁLISE ESPECTRAL
+---------------------------
+Análise Espectral - Solução
+
+[INSERIR IMAGEM: Log eigenspectrum - Figure 2.2]
+Legenda: Variância das componentes menos significativas é várias ordens menor
+
+Solução Implementada:
+• Remoção das 1000 componentes menos significativas
+• Preservação da informação importante
+• Redução significativa do ruído
+
+SLIDE 13: ESTRATÉGIA DE PATCHES
+-------------------------------
+Solução: Estratégia de Patches
+
+[INSERIR IMAGEM: Segmenting 32x32 into patches - Figure 2.4]
+Legenda: Divisão da imagem 32×32 em 25 patches de 8×8
+
+Abordagem:
+• 25 patches de 8×8 pixels
+• 1 patch global subsampled
+• 26 RBMs independentes
+• Redução: Complexidade dimensional
+
+SLIDE 14: SUCESSO COM PATCHES
+-----------------------------
+Breakthrough: Filtros de Qualidade
+
+[INSERIR IMAGEM: Filters learned on 8x8 patch - Figure 2.5]
+Legenda: Detectores de borda aprendidos em patches 8×8
+
+Características dos Filtros:
+• Filtros coloridos: Baixa frequência
+• Filtros P&B: Alta frequência  
+• Interpretação: Posição precisa + cor aproximada
+
+SLIDE 15: FILTROS SUBSAMPLED
+----------------------------
+Filtros em Patches Subsampled
+
+[INSERIR IMAGEM: Filters on subsampled versions - Figure 2.6]
+Legenda: Filtros aprendidos em versões subsampled
+
+Características:
+• Mais suaves e globais
+• Escala diferente de detecção
+• Complementar aos patches locais
+
+SLIDE 16: MERGE DE RBMS
+-----------------------
+Merge de RBMs
+
+[INSERIR IMAGEM: Converting hidden units - Figure 2.7]
+Legenda: Conversão de unidades de patch para imagem completa
+
+Procedimento:
+• Duplicação: Pesos × 16 para patch global
+• Divisão: Por fator correspondente  
+• Inicialização zero: Conexões inexistentes
+• Untied weights: Liberdade para diferenciação
+
+SLIDE 17: RESULTADOS DE CLASSIFICAÇÃO
+------------------------------------
+Resultados de Classificação - CIFAR-10
+
+Performance no CIFAR-10:
+
+Método                              | Erro (%)
+-----------------------------------|----------
+Logistic Regression (raw pixels)   | ~40
+Logistic Regression (whitened)     | ~37
+Logistic Regression (RBM features) | ~22
+Neural Network (RBM init)          | ~18.5
+
+Insights:
+• Features RBM >>> pixels crus
+• Dados não-whitened melhores para RBMs
+
+SLIDE 18: ANÁLISE DE ERROS
+--------------------------
+Análise de Erros
+
+[INSERIR IMAGEM: Confusion matrix - Figure 3.2]
+Legenda: Matriz de confusão mostrando padrões de classificação
+
+Padrões Descobertos:
+• Clustering animal vs não-animal
+• Alta confusão: cat ↔ dog
+• Ocasional: bird ↔ plane
+• Estrutura semântica capturada
+
+SLIDE 19: DATASET CIFAR
+-----------------------
+Contribuição Duradoura: Dataset CIFAR
+
+CIFAR-10:
+• 10 classes: airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck
+• 60.000 imagens (50k treino + 10k teste)
+• Metodologia rigorosa de rotulação
+
+CIFAR-100:
+• 100 classes em 20 superclasses
+• 600 imagens por classe
+
+Impacto:
+• Benchmark fundamental até hoje
+• Base para pesquisas em computer vision
+
+SLIDE 20: PARALELIZAÇÃO
+-----------------------
+Inovação: Paralelização Eficiente
+
+Desafio Computacional:
+• 8000 visíveis × 20000 ocultas
+• Milhões de imagens
+• Necessidade: Distribuição eficiente
+
+Algoritmo Desenvolvido:
+• Divisão por máquinas: Subset de unidades
+• Sincronização: Após cada sampling
+• Comunicação mínima: Apenas bits
+
+Custo de Comunicação:
+Total = 48 × (K-1) MB por batch
+
+SLIDE 21: RESULTADOS DE SPEEDUP
+------------------------------
+Resultados de Paralelização
+
+[INSERIR IMAGEM: Speedup binary RBM - Figure 4.2]
+Legenda: Speedup quase linear para RBMs binárias
+
+[INSERIR IMAGEM: Speedup Gaussian RBM - Figure 4.3]  
+Legenda: Performance ligeiramente inferior para RBMs Gaussianas
+
+Escalabilidade Excelente:
+• Speedup quase linear até 8 máquinas
+• Comunicação negligível para dados binários
+• Eficiência mantida em todas configurações
+
+SLIDE 22: TEMPOS ABSOLUTOS
+--------------------------
+Análise de Tempos Reais
+
+[INSERIR IMAGEM: Training time graphs - Figure 4.4 & 4.5]
+Legenda: Tempos reais de treinamento em diferentes configurações
+
+Resultados:
+• Redução dramática nos tempos
+• Single precision: 2-3× mais rápido
+• Escalabilidade mantida
+
+SLIDE 23: FATORES DE SPEEDUP
+----------------------------
+Fatores de Speedup
+
+[INSERIR IMAGEM: Speedup factor comparisons - Figure 4.6 & 4.7]
+Legenda: Dobrar máquinas quase dobra performance
+
+Análise:
+• Speedup quase perfeito para dados binários
+• Overhead ligeiramente maior para dados reais
+• Comunicação permanece eficiente
+
+SLIDE 24: IMPACTO CIENTÍFICO
+----------------------------
+Impacto Científico e Legado
+
+Contribuições Imediatas:
+• Prova de conceito: Deep learning para imagens reais
+• Benchmarks duradouros: CIFAR ainda usado
+• Paralelização pioneira: Base para frameworks atuais
+• Metodologia sólida: ZCA tornou-se padrão
+
+Influência Futura:
+• AlexNet (2012): Revolução de Krizhevsky
+• Frameworks modernos: Horovod, Ray
+• Preprocessing: Técnicas ainda relevantes
+
+SLIDE 25: CONEXÕES MODERNAS
+---------------------------
+Conexões com Desenvolvimentos Atuais
+
+Energy-Based Models (2020+):
+• EBGAN: RBM + GANs
+• JEM: Classificação + geração unificada
+• Score-based: Gradientes de energia
+
+Contrastive Learning:
+• SimCLR, MoCo: Evolução de CD
+• CLIP: Contrastivo multimodal
+• Self-supervised: Princípios de CD
+
+Arquiteturas Modernas:
+• Vision Transformers: Patches similares
+• ResNets: Skip connections das DBNs
+
+SLIDE 26: LIÇÕES APRENDIDAS
+---------------------------
+Lições Aprendidas
+
+Insights Técnicos:
+• Preprocessing crucial: ZCA fundamental
+• Patches eficazes: Para escalar complexidade
+• Paralelização inteligente: Comunicação mínima
+• Inicialização importa: RBM >>> random
+
+Insights Metodológicos:
+• Benchmarks confiáveis: Essenciais para ciência
+• Visualização: Validação por filtros aprendidos
+• Análise sistemática: Matrizes de confusão
+
+SLIDE 27: CONCLUSÕES
+-------------------
+Conclusões
+
+Trabalho Revolucionário:
+Este trabalho estabeleceu as bases da revolução do deep learning
+
+Legado Duradouro:
+• Ponte histórica: Hinton (2006) → AlexNet (2012)
+• Infraestrutura: Datasets e algoritmos para comunidade
+• Metodologia: Padrões de avaliação e visualização
+• Escalabilidade: Computação distribuída
+
+Importância:
+Demonstrou viabilidade prática do deep learning em dados reais
+
+SLIDE 28: PERGUNTAS?
+-------------------
+Perguntas?
+
+Tópicos para Discussão:
+• Comparação com métodos atuais
+• Aplicações modernas de RBMs
+• Evolução para Transformers
+• Paralelização em deep learning atual
+
+Material Disponível:
+• Resumo completo
+• Código exemplo
+• Bibliografia
+
+Obrigado pela atenção!
+
+=====================================================
+INSTRUÇÕES PARA USO NO POWERPOINT:
+=====================================================
+
+1. Copie cada slide e cole como um novo slide no PowerPoint
+2. Para as imagens: substitua [INSERIR IMAGEM: ...] pelas imagens que você tem
+3. Para equações: use o editor de equações do PowerPoint
+4. Sugestões de formatação:
+   - Títulos: Azul escuro (#1f4e79)
+   - Texto: Cinza escuro (#5f5f5f)
+   - Destaques: Fundo amarelo claro
+   - Fonte: Calibri ou Arial, tamanho 18-24
+
+5. Layout sugerido:
+   - Título no topo
+   - Conteúdo em bullet points
+   - Imagens centralizadas
+   - Equações em caixas destacadas
+
+6. Transições: Use "Fade" ou "Push" para manter profissionalismo
+
+=====================================================

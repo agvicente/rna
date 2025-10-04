@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/theme/white.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { color: #1f4e79; }
+        .reveal .slides section { text-align: left; }
+        .reveal .slides section h1, .reveal .slides section h2 { text-align: center; }
+        .equation { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px;
+            font-size: 0.85em;
+        }
+        .equation p {
+            font-size: 0.9em;
+            margin: 5px 0;
+        }
+        .katex {
+            font-size: 0.8em !important;
+        }
+        .compact-text {
+            font-size: 0.8em;
+        }
+        .compact-text h3 {
+            font-size: 1.1em;
+            margin: 15px 0 8px 0;
+        }
+        .compact-text ul {
+            margin: 8px 0;
+        }
+        .compact-text li {
+            margin: 4px 0;
+            font-size: 0.9em;
+        }
+        .highlight { background: #fff3cd; padding: 5px; border-radius: 3px; }
+        .two-columns { display: flex; justify-content: space-between; }
+        .column { width: 48%; }
+        .center-image { text-align: center; margin: 20px 0; }
+        .center-image img { 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white;
+            padding: 10px;
+        }
+        .small-text { font-size: 0.8em; color: #666; }
+        .image-text-layout { 
+            display: flex; 
+            align-items: flex-start; 
+            gap: 30px; 
+            margin: 20px 0; 
+        }
+        .image-side { 
+            flex: 0 0 45%; 
+            text-align: center; 
+        }
+        .text-side { 
+            flex: 1; 
+            padding-left: 20px; 
+        }
+        .image-side img { 
+            width: 100%; 
+            max-width: 100%; 
+            height: auto;
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white;
+            padding: 10px;
+        }
+        .dual-images {
+            display: flex;
+            gap: 15px;
+            justify-content: space-between;
+        }
+        .dual-images .image-item {
+            flex: 1;
+            text-align: center;
+        }
+        .dual-images img {
+            width: 100%;
+            max-width: 100%;
+        }
+        .performance-table { width: 100%; margin: 20px 0; }
+        .performance-table th, .performance-table td { 
+            padding: 8px; text-align: center; border: 1px solid #ddd; 
+        }
+        .performance-table th { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            
+            <!-- Slide 1: Título -->
+            <section>
+                <h1>Learning Multiple Layers of Features from Tiny Images</h1>
+                <h3 style="text-align: center;">Alex Krizhevsky (2009)</h3>
+                <p style="text-align: center;">
+                    <strong>University of Toronto</strong><br>
+                    Orientador: Geoffrey Hinton<br><br>
+                </p>
+            </section>
+
+            <!-- Slide 2: Contexto Histórico -->
+            <section>
+                <h2>Contexto Histórico - Deep Learning em 2009</h2>
+                <div class="two-columns">
+                    <div class="column">
+                        <h3>O Renascimento</h3>
+                        <ul>
+                            <li><strong>2006</strong>: Breakthrough de Hinton com DBNs</li>
+                            <li><strong>Problema</strong>: Como treinar redes profundas?</li>
+                            <li><strong>Solução</strong>: Pré-treinamento não supervisionado</li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <h3>Desafios da Época</h3>
+                        <ul>
+                            <li>❌ Vanishing gradient problem</li>
+                            <li>❌ Falta de grandes datasets</li>
+                            <li>❌ Limitações computacionais</li>
+                            <li>❌ Feature engineering manual</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 3: Motivação -->
+            <section>
+                <h2>Motivação do Trabalho</h2>
+                <div class="highlight">
+                    <h3>Falhas Anteriores</h3>
+                    <p>• MIT/NYU falharam com "80 million tiny images"<br>
+                    • Modelos aprendiam apenas filtros ruidosos</p>
+                </div>
+                <h3>Objetivos</h3>
+                <ol>
+                    <li><strong>Modelagem generativa</strong> eficaz de imagens</li>
+                    <li><strong>Datasets confiáveis</strong> para benchmarking</li>
+                    <li><strong>Paralelização</strong> para escalabilidade</li>
+                </ol>
+            </section>
+
+            <!-- Slide 4: Propriedades dos Dados -->
+            <section>
+                <h2>Propriedades dos Dados Naturais</h2>
+                <div class="image-text-layout">
+                    <div class="image-side">
+                        <img src="fig1.1.png" alt="Matriz de Covariância">
+                        <p class="small-text">Matriz de covariância do dataset tiny images mostrando correlações entre pixels RGB</p>
+                    </div>
+                    <div class="text-side">
+                        <h3>Características Observadas</h3>
+                        <ul>
+                            <li>Pixels próximos: <strong>fortemente correlacionados</strong></li>
+                            <li>Pixels distantes: <strong>fracamente correlacionados</strong></li>
+                            <li><strong>Simetria</strong> horizontal/vertical</li>
+                            <li><strong>Separação por canais</strong> de cor</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 5: ZCA Whitening -->
+            <section>
+                <h2>ZCA Whitening - Fundamento Teórico</h2>
+                <h3>Por que Whitening?</h3>
+                <ul>
+                    <li>Remove correlações de <strong>segunda ordem</strong></li>
+                    <li>Força foco em correlações de <strong>alta ordem</strong></li>
+                    <li><strong>Fundamental</strong> para sucesso do método</li>
+                </ul>
+                <div class="equation">
+                    <h4>Formulação Matemática:</h4>
+                    <p>$$C = \frac{1}{n-1} XX^T$$</p>
+                    <p>$$W = \frac{1}{\sqrt{n-1}} P D^{-1/2} P^T$$</p>
+                    <p>$$Y = WX$$</p>
+                </div>
+            </section>
+
+            <!-- Slide 6: Filtros de Whitening -->
+            <section>
+                <h2>Filtros de Whitening e Dewhitening</h2>
+                <div class="image-text-layout">
+                    <div class="image-side">
+                        <div class="dual-images">
+                            <div class="image-item">
+                                <img src="fig1.3.png" alt="Filtros de Whitening">
+                                <p class="small-text">Filtros para componentes RGB de pixels específicos</p>
+                            </div>
+                            <div class="image-item">
+                                <img src="fig1.4.png" alt="Filtros de Dewhitening">
+                                <p class="small-text">Filtros correspondentes para reconstrução</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-side">
+                        <h3>Características</h3>
+                        <ul>
+                            <li><strong>Altamente locais</strong> devido à correlação espacial</li>
+                            <li><strong>Separação por canais</strong> RGB</li>
+                            <li><strong>Simetria</strong> reflete propriedades das imagens</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 7: Restricted Boltzmann Machines -->
+            <section>
+                <h2>Restricted Boltzmann Machines</h2>
+                <div class="two-columns">
+                    <div class="column">
+                        <div class="center-image">
+                            <img src="fig1.6.png" alt="Arquitetura RBM" style="max-width: 90%; height: auto;">
+                            <p class="small-text">Unidades visíveis e ocultas</p>
+                        </div>
+                    </div>
+                    <div class="column">
+                        <div class="equation">
+                            <h4>Função de Energia (RBM Binária):</h4>
+                            <p>$$E(v,h) = -\sum_{i,j} v_i h_j w_{ij} - \sum_i v_i b_i^v - \sum_j h_j b_j^h$$</p>
+                            <p><strong>Onde:</strong><br>
+                            • v: estado das unidades visíveis<br>
+                            • h: estado das unidades ocultas<br>
+                            • w_ij: pesos entre unidades</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 8: RBM Gaussiana -->
+            <section>
+                <h2>RBM Gaussiana-Bernoulli</h2>
+                <h3>Para Dados Reais (Intensidades de Pixels)</h3>
+                <div class="equation">
+                    <p>$$E(v,h) = \sum_{i=1}^V \frac{(v_i - b_i^v)^2}{2\sigma_i^2} - \sum_{j=1}^H b_j^h h_j - \sum_{i=1}^V \sum_{j=1}^H \frac{v_i}{\sigma_i} h_j w_{ij}$$</p>
+                </div>
+                <h3>Distribuições Condicionais</h3>
+                <ul>
+                    <li><strong>Visíveis</strong>: Gaussianas com média dependente de h</li>
+                    <li><strong>Ocultas</strong>: Bernoulli com probabilidade sigmoid</li>
+                </ul>
+            </section>
+
+            <!-- Slide 9: Contrastive Divergence -->
+            <section>
+                <h2>Contrastive Divergence (CD-1)</h2>
+                <div class="image-text-layout">
+                    <div class="image-side">
+                        <img src="fig1.7.png" alt="Procedimento CD-N">
+                        <p class="small-text">Procedimento de sampling alternado para estimação</p>
+                    </div>
+                    <div class="text-side">
+                        <div class="equation">
+                            <h4>Atualização de Pesos:</h4>
+                            <p>$$\Delta w_{ij} = \epsilon \left( \mathbb{E}_{data}[v_i h_j] - \mathbb{E}_{model}[v_i h_j] \right)$$</p>
+                            <p>• E_data: Expectativa com visíveis fixadas<br>
+                            • E_model: Expectativa aproximada por CD</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 10: Deep Belief Networks -->
+            <section>
+                <h2>Deep Belief Networks</h2>
+                <div class="image-text-layout">
+                    <div class="image-side">
+                        <img src="fig1.8.png" alt="Arquitetura DBN">
+                        <p class="small-text">Treinamento layer-by-layer com W₁ fixo</p>
+                    </div>
+                    <div class="text-side">
+                        <h3>Processo de Treinamento</h3>
+                        <ol>
+                            <li><strong>RBM 1</strong>: Treina nos dados originais</li>
+                            <li><strong>RBM 2</strong>: Treina nas ativações da RBM 1</li>
+                            <li><strong>Repetir</strong>: Para camadas adicionais</li>
+                            <li><strong>Fine-tuning</strong>: Ajuste supervisionado opcional</li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 11: Problema Inicial -->
+            <section>
+                <h2>Tentativas Iniciais - O Problema</h2>
+                <div class="image-text-layout">
+                    <div class="image-side">
+                        <img src="fig2.1.png" alt="Filtros Sem Sentido">
+                        <p class="small-text">Filtros ruidosos aprendidos por RBM em dados whitened</p>
+                    </div>
+                    <div class="text-side">
+                        <div class="highlight">
+                            <h3>Causa do Problema</h3>
+                            <ul>
+                                <li><strong>Ruído de alta frequência</strong> dominante</li>
+                                <li><strong>Correlações complexas</strong> não capturadas</li>
+                                <li><strong>Necessidade</strong>: Estratégias mais sofisticadas</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 12: Estratégia de Patches -->
+            <section>
+                <h2>Solução: Estratégia de Patches</h2>
+                <div class="image-text-layout">
+                    <div class="image-side">
+                        <img src="fig2.4.png" alt="Segmentação em Patches">
+                        <p class="small-text">Divisão da imagem 32×32 em 25 patches de 8×8</p>
+                    </div>
+                    <div class="text-side">
+                        <h3>Abordagem</h3>
+                        <ul>
+                            <li><strong>25 patches</strong> de 8×8 pixels</li>
+                            <li><strong>1 patch global</strong> subsampled</li>
+                            <li><strong>26 RBMs independentes</strong></li>
+                            <li><strong>Redução</strong>: Complexidade dimensional</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 13: Sucesso com Patches -->
+            <section>
+                <h2>Breakthrough: Filtros de Qualidade</h2>
+                <div class="image-text-layout">
+                    <div class="image-side">
+                        <div class="dual-images">
+                            <div class="image-item">
+                                <img src="fig2.5.png" alt="Filtros 8×8 de Qualidade">
+                                <p class="small-text">Detectores de borda aprendidos em patches 8×8</p>
+                            </div>
+                            <div class="image-item">
+                                <img src="fig2.6.png" alt="Filtros Subsampled 8×8">
+                                <p class="small-text">Filtros aprendidos em versões subsampled 8×8</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-side">
+                        <div class="highlight">
+                            <h3>Características dos Filtros</h3>
+                            <ul>
+                                <li><strong>Filtros coloridos</strong>: Baixa frequência</li>
+                                <li><strong>Filtros P&B</strong>: Alta frequência</li>
+                                <li><strong>Interpretação</strong>: Posição precisa + cor aproximada</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 14: Resultados CIFAR-10 -->
+            <section>
+                <h2>Resultados de Classificação</h2>
+                <h3>Performance no CIFAR-10</h3>
+                <table class="performance-table">
+                    <tr>
+                        <th>Método</th>
+                        <th>Erro (%)</th>
+                    </tr>
+                    <tr>
+                        <td>Logistic Regression (raw pixels)</td>
+                        <td>~40</td>
+                    </tr>
+                    <tr>
+                        <td>Logistic Regression (whitened pixels)</td>
+                        <td>~37</td>
+                    </tr>
+                    <tr>
+                        <td>Logistic Regression (RBM features)</td>
+                        <td><strong>~22</strong></td>
+                    </tr>
+                    <tr style="background: #d4edda;">
+                        <td><strong>Neural Network (RBM init)</strong></td>
+                        <td><strong>~18.5</strong></td>
+                    </tr>
+                </table>
+                <div class="center-image">
+                    <p class="small-text">Comparação detalhada de diferentes configurações</p>
+                </div>
+                <div class="highlight">
+                    <p><strong>Insights:</strong> Features RBM >>> pixels crus<br>
+                    Dados não-whitened melhores para RBMs</p>
+                </div>
+            </section>
+
+            <!-- Slide 15: Matriz de Confusão -->
+            <section>
+                <h2>Análise de Erros</h2>
+                <div class="image-text-layout">
+                    <div class="image-side">
+                        <img src="fig3.2.png" alt="Matriz de Confusão">
+                        <p class="small-text">Padrões de classificação no CIFAR-10</p>
+                    </div>
+                    <div class="text-side">
+                        <h3>Padrões Descobertos</h3>
+                        <ul>
+                            <li><strong>Clustering animal vs não-animal</strong></li>
+                            <li><strong>Alta confusão</strong>: cat ↔ dog</li>
+                            <li><strong>Ocasional</strong>: bird ↔ plane</li>
+                            <li><strong>Estrutura semântica</strong> capturada</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 16: Dataset CIFAR -->
+            <section>
+                <h2>Contribuição Duradoura: Dataset CIFAR</h2>
+                <div class="two-columns">
+                    <div class="column">
+                        <h3>CIFAR-10</h3>
+                        <ul>
+                            <li><strong>10 classes</strong>: airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck</li>
+                            <li><strong>60.000 imagens</strong></li>
+                            <li><strong>50k treino + 10k teste</strong></li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <h3>CIFAR-100</h3>
+                        <ul>
+                            <li><strong>100 classes</strong></li>
+                            <li><strong>20 superclasses</strong></li>
+                            <li><strong>600 imagens/classe</strong></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="highlight">
+                    <h3>Impacto</h3>
+                    <p>• <strong>Benchmark fundamental</strong> até hoje<br>
+                    • <strong>Base para pesquisas</strong> em computer vision<br>
+                    • <strong>Metodologia rigorosa</strong> de rotulação</p>
+                </div>
+            </section>
+
+            <!-- Slide 17: Paralelização -->
+            <section>
+                <h2>Inovação: Paralelização Eficiente</h2>
+                <h3>Desafio Computacional</h3>
+                <ul>
+                    <li><strong>8000 visíveis × 20000 ocultas</strong></li>
+                    <li><strong>Milhões de imagens</strong></li>
+                    <li><strong>Necessidade</strong>: Distribuição eficiente</li>
+                </ul>
+                <h3>Algoritmo Desenvolvido</h3>
+                <ul>
+                    <li><strong>Divisão por máquinas</strong>: Subset de unidades</li>
+                    <li><strong>Sincronização</strong>: Após cada sampling</li>
+                    <li><strong>Comunicação mínima</strong>: Apenas bits</li>
+                </ul>
+                <div class="equation">
+                    <p><strong>Custo de Comunicação:</strong></p>
+                    <p>$$\text{Total} = 48 \times (K-1) \text{ MB por batch}$$</p>
+                </div>
+            </section>
+
+            <!-- Slide 18: Resultados de Speedup -->
+            <section>
+                <h2>Resultados de Paralelização</h2>
+                <div class="image-text-layout">
+                    <div class="image-side">
+                        <img src="fig4.2.png" alt="Speedup RBM Binária">
+                        <p class="small-text">Speedup quase linear para RBMs binárias</p>
+                    </div>
+                    <div class="text-side">
+                        <h3>Escalabilidade Excelente</h3>
+                        <ul>
+                            <li><strong>Speedup quase linear</strong> até 8 máquinas</li>
+                            <li><strong>Comunicação negligível</strong> para dados binários</li>
+                            <li><strong>Double precision</strong>: Melhor escalabilidade</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 19: Impacto e Legado -->
+            <section>
+                <h2>Impacto Científico e Legado</h2>
+                <div class="two-columns">
+                    <div class="column">
+                        <h3>Contribuições Imediatas</h3>
+                        <ul>
+                            <li><strong>Prova de conceito</strong>: Deep learning para imagens reais</li>
+                            <li><strong>Benchmarks duradouros</strong>: CIFAR ainda usado</li>
+                            <li><strong>Paralelização pioneira</strong></li>
+                            <li><strong>Metodologia sólida</strong></li>
+                        </ul>
+                    </div>
+                    <div class="column">
+                        <h3>Influência Futura</h3>
+                        <ul>
+                            <li><strong>AlexNet (2012)</strong>: Revolução de Krizhevsky</li>
+                            <li><strong>Frameworks modernos</strong>: Horovod, Ray</li>
+                            <li><strong>Preprocessing</strong>: ZCA ainda relevante</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 20: Conexões Modernas -->
+            <section class="compact-text">
+                <h2>Conexões com Desenvolvimentos Atuais</h2>
+                <h3>Energy-Based Models (2020+)</h3>
+                <ul>
+                    <li><strong>EBGAN</strong>: RBM + GANs</li>
+                    <li><strong>JEM</strong>: Classificação + geração unificada</li>
+                    <li><strong>Score-based</strong>: Gradientes de energia</li>
+                </ul>
+                <h3>Contrastive Learning</h3>
+                <ul>
+                    <li><strong>SimCLR, MoCo</strong>: Evolução de CD</li>
+                    <li><strong>CLIP</strong>: Contrastivo multimodal</li>
+                    <li><strong>Self-supervised</strong>: Princípios de CD</li>
+                </ul>
+                <h3>Arquiteturas Modernas</h3>
+                <ul>
+                    <li><strong>Vision Transformers</strong>: Patches similares</li>
+                    <li><strong>ResNets</strong>: Skip connections das DBNs</li>
+                </ul>
+            </section>
+
+            <!-- Slide 21: Conclusões -->
+            <section>
+                <h2>Conclusões</h2>
+                <div class="highlight">
+                    <h3>Trabalho Revolucionário</h3>
+                    <p>Este trabalho estabeleceu as <strong>bases da revolução</strong> do deep learning</p>
+                </div>
+                <h3>Legado Duradouro</h3>
+                <ul>
+                    <li><strong>Ponte histórica</strong>: Hinton (2006) → AlexNet (2012)</li>
+                    <li><strong>Infraestrutura</strong>: Datasets e algoritmos para comunidade</li>
+                    <li><strong>Metodologia</strong>: Padrões de avaliação e visualização</li>
+                    <li><strong>Escalabilidade</strong>: Computação distribuída</li>
+                </ul>
+                <div class="highlight">
+                    <p><strong>Importância:</strong> Demonstrou viabilidade prática do deep learning em dados reais</p>
+                </div>
+            </section>
+
+            <!-- Slide 22: Perguntas -->
+            <section>
+                <h2>Perguntas?</h2>
+                <div style="text-align: center; margin-top: 50px;">
+                    <h3>Tópicos para Discussão</h3>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Comparação com métodos atuais</li>
+                        <li>Aplicações modernas de RBMs</li>
+                        <li>Evolução para Transformers</li>
+                        <li>Paralelização em deep learning atual</li>
+                    </ul>
+                    <div style="margin-top: 30px;">
+                        <p><strong>Material Disponível:</strong><br>
+                        Resumo completo • Código exemplo • Bibliografia</p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/contrib/auto-render.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            transition: 'slide',
+            controls: true,
+            progress: true,
+            center: false,
+            width: 1200,
+            height: 800,
+            margin: 0.1,
+            minScale: 0.2,
+            maxScale: 1.5
+        });
+
+        // Renderizar equações matemáticas
+        renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false,
+            options: {
+                displayMode: true,
+                fleqn: false
+            }
+        });
+
+        // Ajustar tamanho das equações após renderização
+        setTimeout(() => {
+            const mathElements = document.querySelectorAll('.katex');
+            mathElements.forEach(element => {
+                element.style.fontSize = '0.75em';
+            });
+        }, 500);
+    </script>
+</body>
+</html>

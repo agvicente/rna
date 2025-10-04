@@ -1,0 +1,402 @@
+\documentclass[aspectratio=169]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[portuguese]{babel}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{xcolor}
+
+% Tema e cores
+\usetheme{Madrid}
+\usecolortheme{default}
+\definecolor{azulescuro}{HTML}{1f4e79}
+\definecolor{cinza}{HTML}{5f5f5f}
+\setbeamercolor{title}{fg=azulescuro}
+\setbeamercolor{frametitle}{fg=azulescuro}
+\setbeamercolor{structure}{fg=azulescuro}
+
+% Informações do documento
+\title{Learning Multiple Layers of Features from Tiny Images}
+\subtitle{Alex Krizhevsky (2009)}
+\author{Apresentação para Banca de Pós-Graduação}
+\institute{University of Toronto \\ Orientador: Geoffrey Hinton}
+\date{\today}
+
+\begin{document}
+
+% Slide de título
+\begin{frame}
+\titlepage
+\end{frame}
+
+% Sumário
+\begin{frame}
+\frametitle{Sumário}
+\tableofcontents
+\end{frame}
+
+\section{Contexto Histórico}
+
+\begin{frame}
+\frametitle{Deep Learning em 2009 - O Renascimento}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{Breakthrough Recente:}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{2006}}: Hinton introduz DBNs
+    \item \textcolor{azulescuro}{\textbf{Problema}}: Como treinar redes profundas?
+    \item \textcolor{azulescuro}{\textbf{Solução}}: Pré-treinamento não supervisionado
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{Desafios da Época:}
+\begin{itemize}
+    \item ❌ Vanishing gradient problem
+    \item ❌ Falta de grandes datasets
+    \item ❌ Limitações computacionais
+    \item ❌ Feature engineering manual
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\section{Motivação}
+
+\begin{frame}
+\frametitle{Motivação do Trabalho}
+\begin{alertblock}{Falhas Anteriores}
+\begin{itemize}
+    \item MIT/NYU falharam com "80 million tiny images"
+    \item Modelos aprendiam apenas filtros ruidosos
+\end{itemize}
+\end{alertblock}
+
+\textbf{Objetivos Principais:}
+\begin{enumerate}
+    \item \textcolor{azulescuro}{\textbf{Modelagem generativa}} eficaz de imagens
+    \item \textcolor{azulescuro}{\textbf{Datasets confiáveis}} para benchmarking  
+    \item \textcolor{azulescuro}{\textbf{Paralelização}} para escalabilidade
+\end{enumerate}
+\end{frame}
+
+\section{Fundamentos Teóricos}
+
+\begin{frame}
+\frametitle{ZCA Whitening - Fundamento Teórico}
+\textbf{Por que Whitening?}
+\begin{itemize}
+    \item Remove correlações de \textcolor{azulescuro}{\textbf{segunda ordem}}
+    \item Força foco em correlações de \textcolor{azulescuro}{\textbf{alta ordem}}
+    \item \textcolor{azulescuro}{\textbf{Fundamental}} para sucesso do método
+\end{itemize}
+
+\begin{exampleblock}{Formulação Matemática}
+\begin{align}
+C &= \frac{1}{n-1} XX^T \\
+W &= \frac{1}{\sqrt{n-1}} P D^{-1/2} P^T \\
+Y &= WX
+\end{align}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}
+\frametitle{Restricted Boltzmann Machines}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\begin{center}
+\textbf{[IMAGEM: Arquitetura RBM]}\\
+\textit{Unidades visíveis e ocultas\\sem conexões intra-camada}
+\end{center}
+\end{column}
+\begin{column}{0.5\textwidth}
+\begin{exampleblock}{Função de Energia (RBM Binária)}
+\begin{equation}
+E(v,h) = -\sum_{i,j} v_i h_j w_{ij} - \sum_i v_i b_i^v - \sum_j h_j b_j^h
+\end{equation}
+\textbf{Onde:}
+\begin{itemize}
+    \item $v$: estado das unidades visíveis
+    \item $h$: estado das unidades ocultas
+    \item $w_{ij}$: pesos entre unidades
+\end{itemize}
+\end{exampleblock}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}
+\frametitle{RBM Gaussiana-Bernoulli}
+\textbf{Para Dados Reais (Intensidades de Pixels):}
+
+\begin{exampleblock}{Função de Energia Gaussiana}
+\begin{equation}
+E(v,h) = \sum_{i=1}^V \frac{(v_i - b_i^v)^2}{2\sigma_i^2} - \sum_{j=1}^H b_j^h h_j - \sum_{i=1}^V \sum_{j=1}^H \frac{v_i}{\sigma_i} h_j w_{ij}
+\end{equation}
+\end{exampleblock}
+
+\textbf{Distribuições Condicionais:}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{Visíveis}}: Gaussianas com média dependente de $h$
+    \item \textcolor{azulescuro}{\textbf{Ocultas}}: Bernoulli com probabilidade sigmoid
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Contrastive Divergence (CD-1)}
+\begin{center}
+\textbf{[IMAGEM: Procedimento CD-N]}\\
+\textit{Sampling alternado para estimação eficiente}
+\end{center}
+
+\begin{exampleblock}{Atualização de Pesos}
+\begin{equation}
+\Delta w_{ij} = \epsilon \left( \mathbb{E}_{data}[v_i h_j] - \mathbb{E}_{model}[v_i h_j] \right)
+\end{equation}
+\begin{itemize}
+    \item $\mathbb{E}_{data}$: Expectativa com visíveis fixadas
+    \item $\mathbb{E}_{model}$: Expectativa aproximada por CD
+\end{itemize}
+\end{exampleblock}
+\end{frame}
+
+\section{Desenvolvimento Prático}
+
+\begin{frame}
+\frametitle{Problema Inicial}
+\begin{center}
+\textbf{[IMAGEM: Filtros Sem Sentido]}\\
+\textit{Filtros ruidosos aprendidos em dados whitened}
+\end{center}
+
+\begin{alertblock}{Causa do Problema}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{Ruído de alta frequência}} dominante
+    \item \textcolor{azulescuro}{\textbf{Correlações complexas}} não capturadas  
+    \item \textcolor{azulescuro}{\textbf{Necessidade}}: Estratégias mais sofisticadas
+\end{itemize}
+\end{alertblock}
+\end{frame}
+
+\begin{frame}
+\frametitle{Solução: Estratégia de Patches}
+\begin{center}
+\textbf{[IMAGEM: Segmentação em Patches]}\\
+\textit{Divisão 32×32 em 25 patches de 8×8}
+\end{center}
+
+\textbf{Abordagem:}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{25 patches}} de 8×8 pixels
+    \item \textcolor{azulescuro}{\textbf{1 patch global}} subsampled
+    \item \textcolor{azulescuro}{\textbf{26 RBMs independentes}}
+    \item \textcolor{azulescuro}{\textbf{Redução}}: Complexidade dimensional
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Breakthrough: Filtros de Qualidade}
+\begin{center}
+\textbf{[IMAGEM: Filtros 8×8 de Qualidade]}\\
+\textit{Detectores de borda aprendidos com sucesso}
+\end{center}
+
+\begin{exampleblock}{Características dos Filtros}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{Filtros coloridos}}: Baixa frequência
+    \item \textcolor{azulescuro}{\textbf{Filtros P\&B}}: Alta frequência
+    \item \textcolor{azulescuro}{\textbf{Interpretação}}: Posição precisa + cor aproximada
+\end{itemize}
+\end{exampleblock}
+\end{frame}
+
+\section{Resultados}
+
+\begin{frame}
+\frametitle{Resultados de Classificação - CIFAR-10}
+\begin{table}
+\centering
+\begin{tabular}{lc}
+\toprule
+\textbf{Método} & \textbf{Erro (\%)} \\
+\midrule
+Logistic Regression (raw pixels) & $\sim$40 \\
+Logistic Regression (whitened pixels) & $\sim$37 \\
+Logistic Regression (RBM features) & \textcolor{azulescuro}{\textbf{$\sim$22}} \\
+\textbf{Neural Network (RBM init)} & \textcolor{azulescuro}{\textbf{$\sim$18.5}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{alertblock}{Insights Principais}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{Features RBM}} $\gg$ pixels crus
+    \item \textcolor{azulescuro}{\textbf{Dados não-whitened}} melhores para RBMs
+\end{itemize}
+\end{alertblock}
+\end{frame}
+
+\begin{frame}
+\frametitle{Dataset CIFAR - Contribuição Duradoura}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{CIFAR-10:}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{10 classes}}: airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck
+    \item \textcolor{azulescuro}{\textbf{60.000 imagens}}
+    \item \textcolor{azulescuro}{\textbf{50k treino + 10k teste}}
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{CIFAR-100:}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{100 classes}}
+    \item \textcolor{azulescuro}{\textbf{20 superclasses}}
+    \item \textcolor{azulescuro}{\textbf{600 imagens/classe}}
+\end{itemize}
+\end{column}
+\end{columns}
+
+\begin{exampleblock}{Impacto}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{Benchmark fundamental}} até hoje
+    \item \textcolor{azulescuro}{\textbf{Base para pesquisas}} em computer vision
+    \item \textcolor{azulescuro}{\textbf{Metodologia rigorosa}} de rotulação
+\end{itemize}
+\end{exampleblock}
+\end{frame}
+
+\section{Inovação Técnica}
+
+\begin{frame}
+\frametitle{Paralelização Eficiente}
+\textbf{Desafio Computacional:}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{8000 visíveis × 20000 ocultas}}
+    \item \textcolor{azulescuro}{\textbf{Milhões de imagens}}
+    \item \textcolor{azulescuro}{\textbf{Necessidade}}: Distribuição eficiente
+\end{itemize}
+
+\textbf{Algoritmo Desenvolvido:}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{Divisão por máquinas}}: Subset de unidades
+    \item \textcolor{azulescuro}{\textbf{Sincronização}}: Após cada sampling
+    \item \textcolor{azulescuro}{\textbf{Comunicação mínima}}: Apenas bits
+\end{itemize}
+
+\begin{exampleblock}{Custo de Comunicação}
+\begin{equation}
+\text{Total} = 48 \times (K-1) \text{ MB por batch}
+\end{equation}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}
+\frametitle{Resultados de Paralelização}
+\begin{center}
+\textbf{[IMAGEM: Gráficos de Speedup]}\\
+\textit{Escalabilidade excelente até 8 máquinas}
+\end{center}
+
+\textbf{Resultados:}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{Speedup quase linear}} até 8 máquinas
+    \item \textcolor{azulescuro}{\textbf{Comunicação negligível}} para dados binários
+    \item \textcolor{azulescuro}{\textbf{Double precision}}: Melhor escalabilidade
+    \item \textcolor{azulescuro}{\textbf{Eficiência mantida}} em todas configurações
+\end{itemize}
+\end{frame}
+
+\section{Legado e Impacto}
+
+\begin{frame}
+\frametitle{Impacto Científico}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{Contribuições Imediatas:}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{Prova de conceito}}: Deep learning para imagens reais
+    \item \textcolor{azulescuro}{\textbf{Benchmarks duradouros}}: CIFAR ainda usado
+    \item \textcolor{azulescuro}{\textbf{Paralelização pioneira}}
+    \item \textcolor{azulescuro}{\textbf{Metodologia sólida}}
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{Influência Futura:}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{AlexNet (2012)}}: Revolução de Krizhevsky
+    \item \textcolor{azulescuro}{\textbf{Frameworks modernos}}: Horovod, Ray
+    \item \textcolor{azulescuro}{\textbf{Preprocessing}}: ZCA ainda relevante
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}
+\frametitle{Conexões com Desenvolvimentos Atuais}
+\textbf{Energy-Based Models (2020+):}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{EBGAN}}: RBM + GANs
+    \item \textcolor{azulescuro}{\textbf{JEM}}: Classificação + geração unificada
+    \item \textcolor{azulescuro}{\textbf{Score-based}}: Gradientes de energia
+\end{itemize}
+
+\textbf{Contrastive Learning:}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{SimCLR, MoCo}}: Evolução de CD
+    \item \textcolor{azulescuro}{\textbf{CLIP}}: Contrastivo multimodal
+    \item \textcolor{azulescuro}{\textbf{Self-supervised}}: Princípios de CD
+\end{itemize}
+
+\textbf{Arquiteturas Modernas:}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{Vision Transformers}}: Patches similares
+    \item \textcolor{azulescuro}{\textbf{ResNets}}: Skip connections das DBNs
+\end{itemize}
+\end{frame}
+
+\section{Conclusões}
+
+\begin{frame}
+\frametitle{Conclusões}
+\begin{alertblock}{Trabalho Revolucionário}
+Este trabalho estabeleceu as \textcolor{azulescuro}{\textbf{bases da revolução}} do deep learning
+\end{alertblock}
+
+\textbf{Legado Duradouro:}
+\begin{itemize}
+    \item \textcolor{azulescuro}{\textbf{Ponte histórica}}: Hinton (2006) $\rightarrow$ AlexNet (2012)
+    \item \textcolor{azulescuro}{\textbf{Infraestrutura}}: Datasets e algoritmos para comunidade
+    \item \textcolor{azulescuro}{\textbf{Metodologia}}: Padrões de avaliação e visualização
+    \item \textcolor{azulescuro}{\textbf{Escalabilidade}}: Computação distribuída
+\end{itemize}
+
+\begin{exampleblock}{Importância}
+Demonstrou \textcolor{azulescuro}{\textbf{viabilidade prática}} do deep learning em dados reais
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}
+\frametitle{Perguntas?}
+\begin{center}
+{\Large \textcolor{azulescuro}{\textbf{Obrigado pela atenção!}}}
+
+\vspace{1cm}
+
+\textbf{Tópicos para Discussão:}
+\begin{itemize}
+    \item Comparação com métodos atuais
+    \item Aplicações modernas de RBMs
+    \item Evolução para Transformers
+    \item Paralelização em deep learning atual
+\end{itemize}
+
+\vspace{0.5cm}
+
+\textbf{Material Disponível:}\\
+Resumo completo $\bullet$ Código exemplo $\bullet$ Bibliografia
+\end{center}
+\end{frame}
+
+\end{document}
